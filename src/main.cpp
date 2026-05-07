@@ -1,5 +1,6 @@
 #include "student.hpp"
 #include "instructor.hpp"
+#include "csv_writer.hpp"
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -20,7 +21,7 @@ int main() {
     for (const auto& p : people) y.push_back(p->to_yaml());
     std::cout << "YAML:\n" << YAML::Dump(y) << "\n";
 
-    // CSV (per concrete type; headers differ)
+    // Per-type CSV
     std::cout << "\nCSV (Student):\n";
     Student tmpS(99,"Tmp","tmp@uni.edu",2030);
     std::cout << tmpS.csv_header() << "\n";
@@ -30,6 +31,13 @@ int main() {
     Instructor tmpI(98,"TmpI","tmpI@uni.edu","Room 1");
     std::cout << tmpI.csv_header() << "\n";
     std::cout << static_cast<Instructor&>(*people[1]).csv_row() << "\n";
+
+    // Extension 1: Polymorphic CSV writer
+    std::cout << "\nPolymorphic CSV (superset):\n";
+    std::vector<const Person*> ptrs;
+    for (const auto& p : people) ptrs.push_back(p.get());
+    std::cout << write_polymorphic_csv(ptrs);
+
   } catch (const ValidationError& e) {
     std::cerr << "ValidationError: " << e.what() << "\n";
     return 2;

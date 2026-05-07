@@ -7,12 +7,18 @@ class Student : public Person {
   int grad_year_;
   std::vector<std::string> courses_;
 public:
+  // Strong exception safety: all validation runs BEFORE any member is mutated.
+  // Person base constructor validates id/name/email; grad_year validated here
+  // before courses_ is moved. If any check throws, the object is never partially
+  // constructed — the initializer list either fully succeeds or fully unwinds.
   Student(int id, std::string name, std::string email, int grad_year,
           std::vector<std::string> courses = {})
     : Person(id, std::move(name), std::move(email)),
-      grad_year_(grad_year), courses_(std::move(courses)) {
-    if (grad_year_ < 2000) throw ValidationError("grad_year too small");
-  }
+      grad_year_([&]{
+        if (grad_year < 2000) throw ValidationError("grad_year too small");
+        return grad_year;
+      }()),
+      courses_(std::move(courses)) {}
 
   std::string role() const override { return "Student"; }
 
@@ -39,13 +45,13 @@ public:
   }
 
   std::string csv_header() const override {
-    return "role,id,name,email,grad_year,courses"; // courses joined by ';'
+    return "role,id,name,email,grad_year,courses";
   }
 
   std::string csv_row() const override {
     std::string joined;
-    for (size_t i=0;i<courses_.size();++i) {
-      if (i) joined+=';';
+    for (size_t i = 0; i < courses_.size(); ++i) {
+      if (i) joined += ';';
       joined += courses_[i];
     }
     return csv_escape(role()) + "," + std::to_string(id_) + "," +
