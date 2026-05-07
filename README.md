@@ -1,32 +1,26 @@
-# C++ Inheritance & Exceptions Lab
-
-A small class hierarchy with basic → advanced inheritance, robust validation via exceptions, and three serializers (JSON, CSV, YAML). Unit tests are written with Catch2 and built/tested with CMake.
-
-## Project Layout
-
-```
-.
-├─ CMakeLists.txt
-├─ src/
-│  ├─ exceptions.hpp
-│  ├─ serializable.hpp
-│  ├─ csv.hpp
-│  ├─ person.hpp        person.cpp
-│  ├─ student.hpp       student.cpp
-│  ├─ instructor.hpp    instructor.cpp
-│  └─ main.cpp
-└─ tests/
-   └─ test_serialization.cpp
-```
+# Inheritance & Serialization Lab
 
 ## Design Choices
 
-- **`Person`** is an abstract base class implementing `Serializable`. It owns `id`, `name`, and `email` with validation enforced in the constructor.
-- **`Student`** and **`Instructor`** are concrete derived classes that each override all four serialization methods (`to_json`, `to_yaml`, `csv_header`, `csv_row`).
-- **Exceptions are thrown** in constructors for invalid `id` (≤ 0), empty `name`, malformed `email` (regex check), `grad_year < 2000`, and empty `office`.
-- **CSV escaping** (`csv_escape`) wraps fields containing commas, double-quotes, or newlines in double-quotes and doubles any internal double-quote characters per RFC-4180.
+I made `Person` an abstract base class that inherits from a `Serializable` interface. `Student` and `Instructor` both extend `Person` and override the serialization methods. I did it this way so I could store them together in a `vector<unique_ptr<Person>>` and call the right serialize method automatically (polymorphism).
 
-## Build & Test
+## Where Exceptions Are Thrown
+
+All validation happens in the constructors so you can never create an object in a bad state.
+
+- `Person`: throws `ValidationError` if `id <= 0`, name is empty, or email doesn't match the regex
+- `Student`: throws `ValidationError` if `grad_year < 2000`
+- `Instructor`: throws `ValidationError` if `office` is empty
+
+There's also a `SerializationError` defined in case serialization ever fails.
+
+## How CSV Escaping Works
+
+The `csv_escape()` function in `csv.hpp` checks if a field contains a comma, double-quote, or newline. If it does, the whole field gets wrapped in double-quotes. Any double-quote character inside the field gets doubled up (`"` becomes `""`). This follows the basic RFC-4180 CSV rules.
+
+Example: `Eve, "The Great"` becomes `"Eve, ""The Great""`
+
+## Build & Run
 
 ```bash
 mkdir -p build && cd build
@@ -35,9 +29,3 @@ cmake --build .
 ctest --output-on-failure
 ./app
 ```
-
-## Dependencies (auto-fetched via CMake FetchContent)
-
-- [nlohmann/json](https://github.com/nlohmann/json) v3.11.3
-- [yaml-cpp](https://github.com/jbeder/yaml-cpp) 0.8.0
-- [Catch2](https://github.com/catchorg/Catch2) v3.6.0
